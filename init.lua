@@ -82,6 +82,16 @@ vim.keymap.set('n', '<right>', '<cmd>echo "Use l to move!!"<CR>')
 vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
 vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
+-- Oil keymaps
+vim.keymap.set('n', '<leader>e', function()
+  require('oil').toggle_float()
+end)
+
+-- Quick file writing and closing
+vim.keymap.set('n', '<leader>w', '<cmd>w<cr>', { silent = false, desc = 'Save with leader key' })
+vim.keymap.set('n', '<leader>q', '<cmd>q<cr>', { silent = false, desc = 'Quit with leader key' })
+vim.keymap.set('n', '<leader>z', '<cmd>wq<cr>', { silent = false, desc = 'Save and Quit with leader key' })
+
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
 --
@@ -90,6 +100,15 @@ vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left wind
 vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+
+-- Keybinds for moving in text easier.
+--
+-- Use H L to move to start/end of lines
+vim.keymap.set('n', 'L', '$<left>')
+vim.keymap.set('n', 'H', '^')
+
+-- Press 'U' for redo
+vim.keymap.set('n', 'U', '<C-r>')
 
 -- [[ Basic Autocommands ]]
 --  See :help lua-guide-autocommands
@@ -294,7 +313,7 @@ require('lazy').setup({
       'WhoIsSethDaniel/mason-tool-installer.nvim',
 
       -- Useful status updates for LSP.
-      { 'j-hui/fidget.nvim', tag = 'legacy' },
+      { 'j-hui/fidget.nvim', opts = {} },
     },
     config = function()
       --  This function gets run when an LSP attaches to a particular buffer.
@@ -346,6 +365,7 @@ require('lazy').setup({
           -- Opens a popup that displays documentation about the word under your cursor
           --  See `:help K` for why this keymap
           map('K', vim.lsp.buf.hover, 'Hover Documentation')
+          map('<leader>k', vim.lsp.buf.signature_help, 'Signature Help')
 
           -- WARN: This is not Goto Definition, this is Goto Declaration.
           --  For example, in C this would take you to the header
@@ -478,6 +498,7 @@ require('lazy').setup({
       },
       formatters_by_ft = {
         astro = { 'prettier' },
+        css = { 'prettier' },
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
@@ -597,6 +618,18 @@ require('lazy').setup({
     lazy = false, -- make sure we load this during startup if it is your main colorscheme
     priority = 1000, -- make sure to load this before all the other start plugins
     config = function()
+      require('catppuccin').setup {
+        transparent_background = true,
+        integrations = {
+          cmp = true,
+          gitsigns = true,
+          treesitter = true,
+          mini = {
+            enabled = true,
+            indentscope_color = '',
+          },
+        },
+      }
       -- Load the colorscheme here
       vim.cmd.colorscheme 'catppuccin'
 
@@ -627,12 +660,7 @@ require('lazy').setup({
       require('mini.surround').setup()
 
       -- Simple and easy statusline.
-      --  You could remove this setup call if you don't like it,
-      --  and try some other statusline plugin
       require('mini.statusline').setup()
-
-      -- ... and there is more!
-      --  Check out: https://github.com/echasnovski/mini.nvim
     end,
   },
 
@@ -655,8 +683,16 @@ require('lazy').setup({
       -- with nvim-treesitter. You should go explore a few and see what interests you:
       --
       --    - Incremental selection: Included, see :help nvim-treesitter-incremental-selection-mod
-      --    - Show your current context: https://github.com/nvim-treesitter/nvim-treesitter-context
       --    - Treesitter + textobjects: https://github.com/nvim-treesitter/nvim-treesitter-textobjects
+    end,
+  },
+
+  {
+    'nvim-treesitter/nvim-treesitter-context',
+    config = function()
+      require('treesitter-context').setup {
+        mode = 'topline',
+      }
     end,
   },
 
