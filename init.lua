@@ -8,11 +8,19 @@ vim.g.maplocalleader = ' '
 -- For more options, you can see `:help option-list`
 --
 -- Set tabs to 4 spaces
-vim.opt.tabstop = 4
-vim.opt.softtabstop = 4
+vim.opt.tabstop = 2
+vim.opt.softtabstop = 2
 vim.opt.expandtab = true
 vim.opt.smartindent = true
-vim.opt.shiftwidth = 4
+vim.opt.shiftwidth = 2
+
+-- keep only a single statusline for current window
+vim.opt.laststatus = 3
+vim.opt.showmode = false
+
+-- command line
+vim.opt.cmdheight = 0
+vim.opt.showcmdloc = 'statusline'
 
 -- Make line numbers default
 vim.opt.number = true
@@ -66,6 +74,13 @@ vim.opt.scrolloff = 10
 -- Add rounded border to things
 vim.diagnostic.config {
     float = { border = 'rounded' },
+}
+
+-- [[ Additional FileTypes ]]
+vim.filetype.add {
+    extension = {
+        mdx = 'mdx',
+    },
 }
 
 -- [[ Basic Keymaps ]]
@@ -156,7 +171,7 @@ vim.opt.rtp:prepend(lazypath)
 -- [[ Configure and install plugins ]]
 require('lazy').setup({
 
-    'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
+    -- 'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
 
     -- "gc" to comment visual regions/lines
     { 'numToStr/Comment.nvim', opts = {} },
@@ -394,6 +409,15 @@ require('lazy').setup({
             --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
             local servers = {
                 astro = {},
+                emmet_ls = {
+                    filetypes = { 'css', 'eruby', 'html', 'javascript', 'javascriptreact', 'less', 'sass', 'scss', 'svelte', 'pug', 'typescriptreact', 'vue' },
+                    init_options = {
+                        html = {
+                            options = {},
+                        },
+                    },
+                },
+                eslint = {},
                 -- clangd = {},
                 -- gopls = {},
                 -- pyright = {},
@@ -404,9 +428,13 @@ require('lazy').setup({
                 --    https://github.com/pmizio/typescript-tools.nvim
                 --
                 -- But for many setups, the LSP (`tsserver`) will work just fine
-                tsserver = {},
-                --
-
+                tsserver = {
+                    init_options = {
+                        preferences = {
+                            disableSuggestions = true,
+                        },
+                    },
+                },
                 lua_ls = {
                     -- cmd = {...},
                     -- filetypes { ...},
@@ -472,16 +500,28 @@ require('lazy').setup({
             require('lspconfig.ui.windows').default_options.border = 'rounded'
         end,
     },
-    -- {
-    --   'pmizio/typescript-tools.nvim',
-    --   dependencies = { 'nvim-lua/plenary.nvim', 'neovim/nvim-lspconfig' },
-    --   opts = {},
-    -- },
+    {
+        'pmizio/typescript-tools.nvim',
+        dependencies = { 'nvim-lua/plenary.nvim', 'neovim/nvim-lspconfig' },
+        opts = {},
+        config = function()
+            require('typescript-tools').setup {
+                settings = {
+                    tsserver_plugins = {
+                        -- for TypeScript v4.9+
+                        '@styled/typescript-styled-plugin',
+                        -- or for older TypeScript versions
+                        -- "typescript-styled-plugin",
+                    },
+                },
+            }
+        end,
+    },
 
     { -- Autoformat
         'stevearc/conform.nvim',
         opts = {
-            notify_on_error = false,
+            notify_on_error = true,
             format_on_save = {
                 timeout_ms = 500,
                 lsp_fallback = true,
@@ -532,6 +572,17 @@ require('lazy').setup({
             local lspkind = require 'lspkind'
             luasnip.config.setup {}
 
+            local types = require 'cmp.types'
+
+            local function deprioritize_snippet(entry1, entry2)
+                if entry1:get_kind() == types.lsp.CompletionItemKind.Snippet then
+                    return false
+                end
+                if entry2:get_kind() == types.lsp.CompletionItemKind.Snippet then
+                    return true
+                end
+            end
+
             cmp.setup {
                 snippet = {
                     expand = function(args)
@@ -544,14 +595,10 @@ require('lazy').setup({
                 },
                 completion = { completeopt = 'menu,menuone,noinsert' },
 
-                -- For an understanding of why these mappings were
-                -- chosen, you will need to read `:help ins-completion`
-                --
-                -- No, but seriously. Please read `:help ins-completion`, it is really good!
                 mapping = cmp.mapping.preset.insert {
-                    ['<C-k>'] = cmp.mapping.select_prev_item(), -- previous suggestion
-                    ['<C-j>'] = cmp.mapping.select_next_item(), -- next suggestion
-                    ['<Tab>'] = cmp.mapping(function(fallback)
+                    ['<C-p>'] = cmp.mapping.select_prev_item(), -- previous suggestion
+                    ['<C-n>'] = cmp.mapping.select_next_item(), -- next suggestion
+                    ['<C-l>'] = cmp.mapping(function(fallback)
                         if cmp.visible() then
                             cmp.select_next_item()
                         elseif luasnip.expand_or_jumpable() then
@@ -560,7 +607,7 @@ require('lazy').setup({
                             fallback()
                         end
                     end, { 'i', 's' }),
-                    ['<S-Tab>'] = cmp.mapping(function(fallback)
+                    ['<C-h>'] = cmp.mapping(function(fallback)
                         if cmp.visible() then
                             cmp.select_prev_item()
                         elseif luasnip.jumpable(-1) then
@@ -578,9 +625,9 @@ require('lazy').setup({
                 -- sources for autocompletion
                 sources = cmp.config.sources {
                     { name = 'nvim_lsp' }, -- lsp
-                    { name = 'buffer', max_item_count = 5 }, -- text within current buffer
-                    { name = 'path', max_item_count = 3 }, -- file system paths
                     { name = 'luasnip', max_item_count = 3 }, -- snippets
+                    { name = 'buffer', max_item_count = 2 }, -- text within current buffer
+                    { name = 'path', max_item_count = 3 }, -- file system paths
                 },
                 -- Enable pictogram icons for lsp/autocompletion
                 formatting = {
@@ -593,6 +640,22 @@ require('lazy').setup({
                 },
                 experimental = {
                     ghost_text = true,
+                },
+                sorting = {
+                    priority_weight = 2,
+                    comparators = {
+                        deprioritize_snippet,
+                        cmp.config.compare.offset,
+                        cmp.config.compare.exact,
+                        cmp.config.compare.scopes,
+                        cmp.config.compare.score,
+                        cmp.config.compare.recently_used,
+                        cmp.config.compare.locality,
+                        cmp.config.compare.kind,
+                        cmp.config.compare.sort_text,
+                        cmp.config.compare.length,
+                        cmp.config.compare.order,
+                    },
                 },
             }
         end,
@@ -664,12 +727,27 @@ require('lazy').setup({
 
             ---@diagnostic disable-next-line: missing-fields
             require('nvim-treesitter.configs').setup {
-                ensure_installed = { 'astro', 'bash', 'c', 'css', 'javascript', 'html', 'lua', 'markdown', 'typescript', 'tsx', 'vim', 'vimdoc' },
+                ensure_installed = {
+                    'astro',
+                    'bash',
+                    'c',
+                    'css',
+                    'javascript',
+                    'html',
+                    'lua',
+                    'markdown',
+                    'markdown_inline',
+                    'typescript',
+                    'tsx',
+                    'vim',
+                    'vimdoc',
+                },
                 -- Autoinstall languages that are not installed
                 auto_install = true,
                 highlight = { enable = true },
                 indent = { enable = true },
             }
+            vim.treesitter.language.register('markdown', 'mdx')
 
             -- There are additional nvim-treesitter modules that you can use to interact
             -- with nvim-treesitter. You should go explore a few and see what interests you:
